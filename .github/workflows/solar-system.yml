@@ -45,5 +45,32 @@ jobs:
           with:
             name: Mocha-test-result
             path: test-results.xml
+    
+    code-coverage:
+        name: Code Coverage
+        runs-on: buntu-latest
+
         
+        steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v6
+
+        - name: Setup NodeJS version - 18
+          uses: actions/setup-node@v6
+          with:
+            node-version: ${{ matrix.nodejs_version }}
+
+        - name: Install Dependencies
+          run: npm install
+
+        - name: Check Code Coverage
+          continue-on-error: true
+          run: npm run coverage
+
+        - name: Archive test results
+          uses: actions/upload-artifact@v7
+          with:
+            name: Code-coverage-result
+            path: coverage
+            retention-days: 5
         
