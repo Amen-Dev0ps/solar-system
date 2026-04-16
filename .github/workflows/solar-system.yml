@@ -51,8 +51,8 @@ jobs:
           if: always()
           uses: actions/upload-artifact@v7
           with:
-            name: Mocha-test-result
-            path: test-results.xml
+            name: Mocha-test-result ${{ matrix.nodejs_version }}
+            path: test-results ${{ matrix.nodejs_version }}.xml
     
     code-coverage:
         name: Code Coverage
@@ -85,7 +85,7 @@ jobs:
         - name: Archive test results
           uses: actions/upload-artifact@v7
           with:
-            name: Code-coverage-result
+            name: Code-coverage-result ${{ matrix.nodejs_version }}
             path: coverage
             retention-days: 5
         
