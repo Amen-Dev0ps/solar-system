@@ -15,13 +15,13 @@ env:
 jobs:
   unit-testing:
     name: Unit Testing
-    runs-on: ubuntu-latest          
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         nodejs_version: [18, 19, 20]
-        operating_system: [ubuntu-latest]   
+        operating_system: [ubuntu-latest]
 
-    services:                         
+    services:
       mongo-db-test:
         image: mongo:7
         ports:
@@ -35,10 +35,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    env:                              
+    env:
       MONGO_URI: mongodb://superuser:testpassword123@localhost:27017/superData?authSource=admin
 
-    steps:                          
+    steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
@@ -52,7 +52,7 @@ jobs:
       - name: Load test data into MongoDB
         run: |
           if [ -f ./test-data/seed.js ]; then
-            mongosh mongodb://localhost:27017/superData --file ./test-data/seed.js
+            mongosh "mongodb://superuser:testpassword123@localhost:27017/superData?authSource=admin" --file ./test-data/seed.js
           else
             echo "⚠️ No seed.js found, skipping data load"
           fi
@@ -79,13 +79,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Mocha-test-result-nodeJS ${{ matrix.nodejs_version }}   
-          path: test-results-nodeJS ${{ matrix.nodejs_version }}.xml   
+          name: Mocha-test-result-nodeJS-${{ matrix.nodejs_version }}
+          path: test-results-nodeJS-${{ matrix.nodejs_version }}.xml
 
   code-coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    continue-on-error: true
     
     steps:
       - name: Checkout Repository
@@ -110,7 +109,7 @@ jobs:
         run: npm run coverage
 
       - name: Archive test results
-        if: always()                 
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: Code-coverage-result
@@ -148,7 +147,7 @@ jobs:
           docker run --name solar-system-app -d -p 3000:3000 \
             ${{ vars.DOCKERHUB_USERNAME }}/solar-system-lab:${{ github.sha }}
           
-          docker exec solar-system-app printenv | grep -E "MONGO_URI|MONGO_USERNAME|MONGO_PASSWORD"  
+          docker exec solar-system-app printenv | grep -E "MONGO_URI|MONGO_USERNAME|MONGO_PASSWORD"
 
           IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system-app)
           echo "Container IP: $IP"
