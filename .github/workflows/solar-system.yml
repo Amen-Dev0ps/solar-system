@@ -118,9 +118,22 @@ jobs:
           docker images
           docker run --name solar-system-app -d -p 3000:3000 \
             ${{ vars.DOCKERHUB_USERNAME }}/solar-system-lab:${{ github.sha }}
+          
+            docker exec solar-system-app printenv | grep -E "MONGO_URI|MONGO_USERNAME|MONGO_PASSWORD"
 
           IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system-app)
           echo "Container IP: $IP"
 
           echo "Testing image URL using wget"
           wget -q -O - 127.0.0.1:3000/live | grep live
+
+      - name: Docker Push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/solar-system-lab:${{ github.sha }}
+          build-args: |
+            MONGO_URI='mongodb+srv://supercluster.d83jj.mongodb.net/superData'
+            MONGO_USERNAME=${{ vars.MONGO_USERNAME }}
+            MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
