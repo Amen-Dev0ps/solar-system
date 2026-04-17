@@ -140,3 +140,35 @@ jobs:
             MONGO_URI='mongodb+srv://supercluster.d83jj.mongodb.net/superData'
             MONGO_USERNAME=${{ vars.MONGO_USERNAME }}
             MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+  
+
+
+  Dev-Deploy:
+    needs: Docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Install Kubectl CLI
+        uses: azure/setup-kubectl@v4
+        with:
+         version: 'v1.32.0'
+
+      - name: Set Kubeconfig
+        uses: azure/k8s-set-context@v5
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+        
+         
+      - name: Fetch Kubernetes Cluster Details
+        run: |
+          kubectl version --short
+          echo ---------------------------------------
+          kubectl get nodes -o wide
+
+
+
+      
