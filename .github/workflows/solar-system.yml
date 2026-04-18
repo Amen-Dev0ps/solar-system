@@ -145,6 +145,41 @@ jobs:
 
   Dev-Deploy:
     needs: Docker
+    if: contains(github.ref, 'feature/')
+    uses: ./.github/workflows/reuse-deployment.yaml
+    secrets:
+      k8s_kubeconfig: ${{ secrets.KUBECONFIG}}
+      mongodb_password: ${{ secrets.MONGO_PASSWORD}}
+    with:
+      environment: development
+      k8s-manifest-directory: kubernetes/development/
+
+
+  Integration-testing:
+    name: Dev integration testing
+    if: contains(github.ref, 'feature/')    
+    needs: Dev-Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test URL Output using Curl & JQ
+        env:
+          URL: ${{ needs.Dev-Deploy.outputs.application_url }}
+        run: 
+          echo $URL
+          echo "----------------------------------------"
+          curl https://$URL/live -s -k | jq -r .status | grep -i live
+
+
+
+Prod-Deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: Docker
+    environment: 
+      name: production
+      url: https://${{ steps.set-ingress-host-address.outputs.APP_INGRESS_HOST }}
+    outputs:
+      APP_INGRESS_URL: ${{ steps.set-ingress-host-address.outputs.APP_INGRESS_HOST }}
     runs-on: ubuntu-latest
 
     steps:
@@ -178,7 +213,7 @@ jobs:
         with:
           tokenPrefix: '_{_'
           tokenSuffix: '_}_'
-          files: '["kubernetes/development/*.yaml"]'
+          files: '["kubernetes/production/*.yaml"]'
         env:
           NAMESPACE: ${{ vars.NAMESPACE}}
           REPLICAS: ${{ vars.REPLICAS }}
@@ -187,8 +222,29 @@ jobs:
 
       - name: Verify Manifests Correctness
         run: |
-          cat kubernetes/devlopment/*.yaml
+          cat kubernetes/production/*.yaml
 
-
-
+      - name: Deploy to Production ENV
+        run: |
+          kubectl apply -f kubernetes/production/
       
+      - name: Set App Ingress Host
+        id: set-ingress-host-address
+        run: |
+          echo "APP_INGRESS_HOST"=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath="{.items[0].spec.tls[0].hosts[0]}") >> "$GITHUB.OUTPUT"
+
+
+  Integration-testing:
+    name: Prod integration testing
+    if: github.ref == 'refs/heads/main'
+    needs: Prod-Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test URL Output using Curl & JQ
+        env:
+          URL: ${{ needs.Prod-Deploy.outputs.APP_INGRESS_URL }}
+        run: 
+          echo $URL
+          echo "----------------------------------------"
+          curl https://$URL/live -s -k | jq -r .status | grep -i live
